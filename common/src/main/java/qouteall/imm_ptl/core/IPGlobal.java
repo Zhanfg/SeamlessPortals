@@ -49,6 +49,16 @@ public class IPGlobal {
      */
     public static boolean lowMemoryServerMode = false;
     public static int lowMemoryServerMaxPortalRadius = 3;
+
+    // Default low-memory behavior: no distant/unobserved portal destination
+    // loading, a safe close-range bypass, and at most one active remote view.
+    // The client renderer is NOT moved to the server.
+    public static int lowMemoryServerObservationRangeBlocks = 128;
+    public static int lowMemoryServerSafeRangeBlocks = 24;
+    public static int lowMemoryServerActiveViewsPerPlayer = 1;
+    public static int lowMemoryServerChainLoaderBudget = 0;
+    public static int lowMemoryServerStaleReleaseGenerations = 1;
+    public static boolean lowMemoryServerDiagnostics = false;
     
     /** DEFAULT FALSE since 2026-08-02 (user decision) — see IPConfig.lagAttackProof for the reasoning
      *  and for what protection is given up. Kept in step with that field's default deliberately: if
