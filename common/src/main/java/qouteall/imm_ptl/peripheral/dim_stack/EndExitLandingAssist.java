@@ -5,15 +5,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import qouteall.imm_ptl.core.portal.global_portals.VerticalConnectingPortal;
 
 /**
@@ -77,16 +78,22 @@ public final class EndExitLandingAssist {
                 continue;
             }
 
-            // Heightmaps are cheap for the player's already-loaded chunk.
-            // They give an APPROXIMATE surface, not a guarantee of a safe
-            // landing block. Skip when Skyland contains no ground at all.
-            int groundY = level.getHeight(
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                Mth.floor(player.getX()), Mth.floor(player.getZ())
-            );
-            boolean groundExists = groundY > level.getMinY() + 3;
+            // At most one 49-block downward ray every two ticks for this
+            // tracked player. Unlike a surface heightmap, this finds cave
+            // floors and floating islands BELOW the player rather than the
+            // highest distant land in the same X/Z column.
+            if ((state.ticksLeft & 1) != 0) continue;
+            Vec3 feet = player.position();
+            BlockHitResult ground = level.clip(new ClipContext(
+                feet.add(0, 0.15, 0),
+                feet.add(0, -49.0, 0),
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.WATER,
+                player
+            ));
+            boolean groundExists = ground.getType() == HitResult.Type.BLOCK;
             if (!EndExitLandingPolicy.shouldBrake(
-                player.getY() - groundY,
+                groundExists ? player.getY() - ground.getLocation().y : Double.POSITIVE_INFINITY,
                 player.getDeltaMovement().y,
                 groundExists
             )) continue;
