@@ -8,6 +8,7 @@ on:
       - optimize/fabric-26.3-stack-lowmem-v1
       - optimize/fabric-26.3-end-bottom-exit-v1
       - optimize/fabric-26.3-atmosphere-landing-v1
+      - optimize/fabric-26.3-height-seam-interaction-v1
   pull_request:
     branches:
       - mc-26.3-main
