@@ -278,6 +278,8 @@ public class IPConfig implements ConfigData {
     @ConfigEntry.Category("client")
     public boolean smoothDimensionSeamAtmosphere = true;
     @ConfigEntry.Category("client")
+    public boolean enableDimensionBoundaryBlockPlacement = true;
+    @ConfigEntry.Category("client")
     @ConfigEntry.BoundedDiscrete(min = 0, max = 5000)
     public int dimensionSeamBlendMillis = 1600;
     @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
@@ -434,6 +436,7 @@ public class IPConfig implements ConfigData {
         IPGlobal.indirectLoadingRadiusCap = indirectLoadingRadiusCap;
         IPGlobal.lowMemoryServerMode = lowMemoryServerMode;
         IPGlobal.smoothDimensionSeamAtmosphere = smoothDimensionSeamAtmosphere;
+        IPGlobal.enableDimensionBoundaryBlockPlacement = enableDimensionBoundaryBlockPlacement;
         IPGlobal.dimensionSeamBlendMillis = Mth.clamp(dimensionSeamBlendMillis, 0, 5000);
         IPGlobal.lowMemoryServerMaxPortalRadius =
             Mth.clamp(lowMemoryServerMaxPortalRadius, 1, 8);
