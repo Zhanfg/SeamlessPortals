@@ -34,6 +34,8 @@ public class MixinRenderSystem_Fog {
         at = @At("HEAD")
     )
     private void onUpdateFogBuffer(FogData fogData, CallbackInfo ci) {
+        // Main world only: never tint the real destination drawn THROUGH a portal.
+        qouteall.imm_ptl.core.render.context_management.SeamAtmosphereBlend.onFog(fogData);
         fogData.renderDistanceStart = MyRenderHelper.transformFogDistance(fogData.renderDistanceStart);
         fogData.renderDistanceEnd = MyRenderHelper.transformFogDistance(fogData.renderDistanceEnd);
         fogData.environmentalStart = MyRenderHelper.transformFogDistance(fogData.environmentalStart);

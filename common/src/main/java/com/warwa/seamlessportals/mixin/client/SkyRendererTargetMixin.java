@@ -3,6 +3,10 @@ package com.warwa.seamlessportals.mixin.client;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SkyRenderer;
+import net.minecraft.client.renderer.state.level.SkyRenderState;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -48,6 +52,16 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class SkyRendererTargetMixin {
 
     @Shadow @Final private RenderTarget renderTarget;
+
+    @Inject(
+        method = "render(Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lnet/minecraft/client/renderer/state/level/SkyRenderState;)V",
+        at = @At("HEAD")
+    )
+    private void seamlessportals$blendMainSkyColor(
+        GpuBufferSlice fogSlice, SkyRenderState sky, CallbackInfo ci
+    ) {
+        qouteall.imm_ptl.core.render.context_management.SeamAtmosphereBlend.onSky(sky);
+    }
 
     // 26.3: the captured-target hazard is unchanged — SkyRenderer still stores the RenderTarget it was constructed with
     // (mc263-ref SkyRenderer.java:66,79-81) — but WHERE it is read moved. 26.2's eight part methods each opened their OWN

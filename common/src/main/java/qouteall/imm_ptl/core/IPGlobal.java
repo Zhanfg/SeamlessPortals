@@ -48,6 +48,10 @@ public class IPGlobal {
      * player's own vanilla view-distance loader.
      */
     public static boolean lowMemoryServerMode = false;
+
+    // Client-only atmospheric crossfade; never affects remote destination rendering.
+    public static boolean smoothDimensionSeamAtmosphere = true;
+    public static int dimensionSeamBlendMillis = 1600;
     public static int lowMemoryServerMaxPortalRadius = 3;
 
     // Default low-memory behavior: no distant/unobserved portal destination

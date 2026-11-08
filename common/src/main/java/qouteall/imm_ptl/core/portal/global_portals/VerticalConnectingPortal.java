@@ -3,6 +3,9 @@ package qouteall.imm_ptl.core.portal.global_portals;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
+import qouteall.imm_ptl.peripheral.dim_stack.EndExitLandingAssist;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import qouteall.imm_ptl.core.McHelper;
@@ -34,6 +37,14 @@ public class VerticalConnectingPortal extends GlobalTrackedPortal {
     
     public VerticalConnectingPortal(EntityType<?> entityType, Level world) {
         super(entityType, world);
+    }
+
+    @Override
+    public void onEntityTeleportedOnServer(Entity entity) {
+        super.onEntityTeleportedOnServer(entity);
+        if (entity instanceof ServerPlayer player) {
+            EndExitLandingAssist.onCrossing(this, player);
+        }
     }
     
     public static void connect(

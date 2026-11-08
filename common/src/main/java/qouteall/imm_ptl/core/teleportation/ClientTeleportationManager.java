@@ -114,6 +114,7 @@ public class ClientTeleportationManager {
         );
         
         IPCGlobal.CLIENT_CLEANUP_EVENT.register(() -> {
+            qouteall.imm_ptl.core.render.context_management.SeamAtmosphereBlend.reset();
             lastPlayerEyePos = null;
 //            disableTeleportFor(2);
         });
@@ -384,7 +385,16 @@ public class ClientTeleportationManager {
         
         ClientLevel fromWorld = client.level;
         ResourceKey<Level> fromDimension = fromWorld.dimension();
-        
+
+        // Capture the just-rendered source atmosphere BEFORE the level switch.
+        // The proven attribute-probe reset remains enabled: this is a separate
+        // visual curve, not reuse of stale cross-world vanilla probe values.
+        if (fromDimension != toDimension) {
+            qouteall.imm_ptl.core.render.context_management.SeamAtmosphereBlend.begin(
+                portal, fromDimension, toDimension
+            );
+        }
+
         if (fromDimension != toDimension) {
             ClientLevel toWorld = ClientWorldLoader.getWorld(toDimension);
             
