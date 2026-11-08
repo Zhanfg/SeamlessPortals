@@ -294,12 +294,33 @@ public class BlockManipulationClient {
             }
         }
 
-        if (remoteHitResult != null) {
-            if (!world.getBlockState(((BlockHitResult) remoteHitResult).getBlockPos()).isAir()) {
-                client.hitResult = createMissedHitResult(from, to);
-                remotePointedDim = portal.getDestDim();
-                remotePointedPortal = portal;
+        // Height seams are a special case of an EMPTY remote portal window:
+        // vanilla has no source-world cell beyond Y=319, so the normal
+        // destination ray may MISS even though the first Skyland cell is a
+        // legal placeable position. Route that single boundary cell through
+        // the existing dimension-aware packet and item-use pipeline.
+        //
+        // This never creates a phantom block in the source world, changes
+        // the player's dimension, or turns a cold/unloaded chunk into air.
+        boolean emptyBoundaryPlacementTarget = false;
+        if (qouteall.imm_ptl.core.IPGlobal.enableDimensionBoundaryBlockPlacement
+            && remoteHitResult != null
+            && remoteHitResult.getType() == HitResult.Type.MISS) {
+            BlockHitResult boundary = DimensionBoundaryPlacementTarget.forEmptySeamFace(
+                portal, client.level, world, from
+            );
+            if (boundary != null) {
+                remoteHitResult = boundary;
+                emptyBoundaryPlacementTarget = true;
             }
+        }
+
+        if (remoteHitResult instanceof BlockHitResult remoteBlockHit
+            && (emptyBoundaryPlacementTarget
+                || !world.getBlockState(remoteBlockHit.getBlockPos()).isAir())) {
+            client.hitResult = createMissedHitResult(from, to);
+            remotePointedDim = portal.getDestDim();
+            remotePointedPortal = portal;
         }
 
     }
