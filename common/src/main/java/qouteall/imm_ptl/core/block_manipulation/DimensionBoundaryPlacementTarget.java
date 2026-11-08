@@ -58,7 +58,7 @@ public final class DimensionBoundaryPlacementTarget {
         }
 
         Direction face = dy > 0 ? Direction.UP : Direction.DOWN;
-        double hitY = dy > 0 ? y + 0.01 : y + 0.99;
+        double hitY = DimensionBoundaryPlacementPolicy.interiorHitY(y, dy);
         return new BlockHitResult(
             new Vec3(destRayOrigin.x, hitY, destRayOrigin.z),
             face,
