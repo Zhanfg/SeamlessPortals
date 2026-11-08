@@ -461,6 +461,7 @@ public class ImmPtlChunkTracking {
         }
         
         EntitySync.tick(server);
+        ServerPortalTelemetry.tick(server);
     }
     
     public static boolean isPlayerWatchingChunk(
