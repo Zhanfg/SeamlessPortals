@@ -282,11 +282,49 @@ public class ChunkVisibility {
             visiblePortalRangeChunks, 256
         );
         
+        // LOW-MEM: no new remote chunk tickets for distant/off-screen portals.
+        // This is a server-only HINT: the server derives it from its own player
+        // state and portal geometry, not client-requested world coordinates.
+        // At close range the safe-zone bypass remains active even when looking away.
+        // Sorting closest-first prevents a distant window from exhausting the
+        // per-player active-view budget before an adjacent crossing target.
+        if (IPGlobal.lowMemoryServerMode) {
+            Vec3 eye = player.getEyePosition();
+            Vec3 look = player.getLookAngle();
+            int observationRange = Math.max(
+                IPGlobal.lowMemoryServerObservationRangeBlocks,
+                Math.max(96, IPGlobal.portalWindowRenderDistance * 16)
+            );
+            nearbyPortals = nearbyPortals.stream()
+                .filter(portal -> {
+                    Vec3 nearest = portal.getNearestPointInPortal(eye);
+                    Vec3 toPortal = nearest.subtract(eye);
+                    double lengthSqr = toPortal.lengthSqr();
+                    double lookDot = lengthSqr < 0.0001
+                        ? 1.0 : look.dot(toPortal.scale(1.0 / Math.sqrt(lengthSqr)));
+                    return ServerPortalInterest.shouldLoad(
+                        portal.getDistanceToNearestPointInPortal(eye),
+                        portal.isInFrontOfPortal(eye),
+                        lookDot, observationRange, IPGlobal.lowMemoryServerSafeRangeBlocks
+                    );
+                })
+                .sorted(Comparator.comparingDouble(
+                    portal -> portal.getDistanceToNearestPointInPortal(eye)
+                ))
+                .limit(ServerPortalInterest.activeViewLimit(
+                    IPGlobal.lowMemoryServerActiveViewsPerPlayer
+                ))
+                .toList();
+        }
+
         // IS5-RLOAD: ONE budget for the whole player tick, shared across every direct portal's
-        // chain walk. Declared here rather than inside the walk because the walk is called once per
-        // DIRECT portal — a budget local to it would be re-granted per portal and the real ceiling
-        // would be (direct portals) x budget.
-        int[] chainLoaderBudget = {IPGlobal.portalChainLoaderBudget};
+        // chain walk. On a 2 GB server opt out of deep recursive preload by
+        // default: it multiplies remote residency even when not needed for crossing.
+        int[] chainLoaderBudget = {
+            IPGlobal.lowMemoryServerMode
+                ? IPGlobal.lowMemoryServerChainLoaderBudget
+                : IPGlobal.portalChainLoaderBudget
+        };
 
         for (Portal portal : nearbyPortals) {
             Level destinationWorld = portal.getDestinationWorld();
@@ -299,7 +337,7 @@ public class ChunkVisibility {
             
             func.accept(getGeneralDirectPortalLoader(player, portal));
     
-            if (!isShrinkLoading()) {
+            if (!isShrinkLoading() && chainLoaderBudget[0] > 0) {
                 // IS5-RLOAD — LOAD AS DEEP AS WE RENDER, instead of a hardcoded two levels.
                 //
                 // This loop used to be flat: direct portals (layer 1) each got ONE pass over their
