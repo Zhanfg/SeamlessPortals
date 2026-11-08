@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - optimize/fabric-26.3-idle-20m-v1
+      - optimize/fabric-26.3-stack-lowmem-v1
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +41,39 @@ jobs:
           spawn-protection=0
           PROPS
           done
+      - name: Configure 2D Nether-overworld stack for isolated smoke
+        shell: bash
+        run: |
+          for d in fabric/runs/server runs/server; do
+            mkdir -p "$d/config"
+            cat > "$d/config/immersive_portals.json" <<'JSON'
+          {
+            "lowMemoryServerMode": true,
+            "lowMemoryServerMaxPortalRadius": 3,
+            "lowMemoryServerStackMaxPortalRadius": 2,
+            "lowMemoryServerStackSafeRangeBlocks": 32,
+            "lowMemoryServerDiagnostics": true,
+            "dimStackPreset": {
+              "loop": false,
+              "gravityTransform": false,
+              "entries": [
+                {
+                  "dimensionIdStr": "minecraft:overworld",
+                  "scale": 1.0,
+                  "flipped": false,
+                  "bedrockReplacementStr": "minecraft:obsidian"
+                },
+                {
+                  "dimensionIdStr": "minecraft:the_nether",
+                  "scale": 1.0,
+                  "flipped": false,
+                  "bedrockReplacementStr": "minecraft:obsidian"
+                }
+              ]
+            }
+          }
+          JSON
+          done
       - name: Boot dedicated Fabric server and detect ready state
         shell: bash
         run: |
@@ -51,8 +85,13 @@ jobs:
           trap 'kill -TERM -- -"$runner_pid" 2>/dev/null || true' EXIT
           for ((i=1; i<=175; i++)); do
             if grep -Eq 'Done \([0-9.,]+s\)!|Done \([0-9.,]+s\)' server-smoke.log; then
-              echo "PASS: dedicated Fabric server reached ready state"
-              tail -n 40 server-smoke.log
+              if ! grep -Fq 'Applying dimension stack preset in dedicated server' server-smoke.log; then
+                echo "FAIL: server booted, but stack preset was not loaded"
+                tail -n 110 server-smoke.log
+                exit 1
+              fi
+              echo "PASS: dedicated Fabric server booted and two-dimension stack preset was read"
+              tail -n 50 server-smoke.log
               exit 0
             fi
             if ! kill -0 "$runner_pid" 2>/dev/null; then
