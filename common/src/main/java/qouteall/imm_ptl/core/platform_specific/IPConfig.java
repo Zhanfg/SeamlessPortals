@@ -283,6 +283,10 @@ public class IPConfig implements ConfigData {
     @ConfigEntry.BoundedDiscrete(min = 8, max = 48)
     public int lowMemoryServerSafeRangeBlocks = 24;
     @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
+    public int lowMemoryServerStackMaxPortalRadius = 2;
+    @ConfigEntry.BoundedDiscrete(min = 16, max = 64)
+    public int lowMemoryServerStackSafeRangeBlocks = 32;
+    @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
     public int lowMemoryServerActiveViewsPerPlayer = 1;
     @ConfigEntry.BoundedDiscrete(min = 0, max = 16)
     public int lowMemoryServerChainLoaderBudget = 0;
@@ -427,6 +431,10 @@ public class IPConfig implements ConfigData {
             Mth.clamp(lowMemoryServerObservationRangeBlocks, 16, 512);
         IPGlobal.lowMemoryServerSafeRangeBlocks =
             Mth.clamp(lowMemoryServerSafeRangeBlocks, 8, 48);
+        IPGlobal.lowMemoryServerStackMaxPortalRadius =
+            Mth.clamp(lowMemoryServerStackMaxPortalRadius, 1, 8);
+        IPGlobal.lowMemoryServerStackSafeRangeBlocks =
+            Mth.clamp(lowMemoryServerStackSafeRangeBlocks, 16, 64);
         IPGlobal.lowMemoryServerActiveViewsPerPlayer =
             Mth.clamp(lowMemoryServerActiveViewsPerPlayer, 1, 8);
         IPGlobal.lowMemoryServerChainLoaderBudget =
