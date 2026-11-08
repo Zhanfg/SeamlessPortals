@@ -5,6 +5,7 @@ on:
     branches:
       - optimize/fabric-26.3-idle-20m-v1
       - optimize/fabric-26.3-stack-lowmem-v1
+      - optimize/fabric-26.3-end-bottom-exit-v1
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +18,14 @@ permissions:
 jobs:
   headless-server:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - end_destination: minecraft:overworld
+            artifact_suffix: overworld
+          - end_destination: immersive_portals:skyland
+            artifact_suffix: skyland
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +50,7 @@ jobs:
           spawn-protection=0
           PROPS
           done
-      - name: Configure Skyland -> Overworld -> Nether stack for isolated smoke
+      - name: Configure three-layer stack and one-way End floor exit
         shell: bash
         run: |
           for d in fabric/runs/server runs/server; do
@@ -56,6 +65,8 @@ jobs:
             "dimStackPreset": {
               "loop": false,
               "gravityTransform": false,
+              "endBottomExitTarget": "__END_EXIT_TARGET__",
+              "endBottomExitCeilingOffsetBlocks": 32,
               "entries": [
                 {
                   "dimensionIdStr": "immersive_portals:skyland",
@@ -79,6 +90,7 @@ jobs:
             }
           }
           JSON
+            sed -i "s|__END_EXIT_TARGET__|${{ matrix.end_destination }}|g" "$d/config/immersive_portals.json"
           done
           python3 - <<'PY'
           import json
@@ -89,7 +101,9 @@ jobs:
           ids=[e['dimensionIdStr'] for e in stack['entries']]
           assert ids == ['immersive_portals:skyland', 'minecraft:overworld', 'minecraft:the_nether']
           assert all(e['scale'] == 1 for e in stack['entries'])
-          print('PASS: top-down three-dimension stack preset and 1:1 scale')
+          assert stack['endBottomExitTarget'] in ('minecraft:overworld', 'immersive_portals:skyland')
+          assert stack['endBottomExitCeilingOffsetBlocks'] == 32
+          print('PASS: three-layer 1:1 stack and independent one-way End escape configured')
           PY
       - name: Boot dedicated Fabric server and detect ready state
         shell: bash
@@ -107,7 +121,12 @@ jobs:
                 tail -n 110 server-smoke.log
                 exit 1
               fi
-              echo "PASS: dedicated Fabric server booted and three-dimension Skyland stack preset was read"
+              if ! grep -Fq 'Installed one-way End floor exit to ${{ matrix.end_destination }}' server-smoke.log; then
+                echo "FAIL: no server-side End floor portal installation for requested destination"
+                tail -n 130 server-smoke.log
+                exit 1
+              fi
+              echo "PASS: three-layer stack and one-way End floor portal installed for ${{ matrix.end_destination }}"
               tail -n 50 server-smoke.log
               exit 0
             fi
@@ -129,7 +148,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fabric-26.3-dedicated-server-smoke-log
+          name: fabric-26.3-end-exit-${{ matrix.artifact_suffix }}-smoke-log
           path: server-smoke.log
           if-no-files-found: warn
           retention-days: 7
