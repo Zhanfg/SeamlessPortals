@@ -51,6 +51,9 @@ public class IPGlobal {
 
     // Client-only atmospheric crossfade; never affects remote destination rendering.
     public static boolean smoothDimensionSeamAtmosphere = true;
+    // Client-side visual targeting of the first valid block behind a global
+    // height seam; server still checks placement via vanilla world authority.
+    public static boolean enableDimensionBoundaryBlockPlacement = true;
     public static int dimensionSeamBlendMillis = 1600;
     public static int lowMemoryServerMaxPortalRadius = 3;
 

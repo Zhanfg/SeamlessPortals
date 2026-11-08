@@ -34,6 +34,7 @@ import qouteall.imm_ptl.core.network.PacketRedirection;
 import qouteall.imm_ptl.core.portal.Portal;
 import qouteall.imm_ptl.core.portal.PortalUtils;
 import qouteall.imm_ptl.core.portal.global_portals.GlobalPortalStorage;
+import qouteall.imm_ptl.core.portal.global_portals.VerticalConnectingPortal;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -150,8 +151,19 @@ public class BlockManipulationServer {
         Vec3 newCenter = portal.transformPoint(hitCenter.add(sideVec.scale(0.501)));
         BlockPos placingBlockPos = BlockPos.containing(newCenter);
         
+        // A real vertical height seam has a real target-world face.
+        // Vec3.ZERO was sufficient for picking a target position but
+        // corrupts click-relative placement data (slabs, stairs, wall
+        // attachments, and other items reading the hit point).
+        // Keep the established behavior for other global portal shapes:
+        // those may rotate axes and need a separate full face transform.
+        Vec3 newHitLocation = portal instanceof VerticalConnectingPortal
+            ? portal.transformPoint(
+                blockHitResult.getLocation().add(sideVec.scale(0.001))
+            )
+            : Vec3.ZERO;
         BlockHitResult newHitResult = new BlockHitResult(
-            Vec3.ZERO,
+            newHitLocation,
             side.getOpposite(),
             placingBlockPos,
             blockHitResult.isInside()
