@@ -40,17 +40,20 @@ For the optional independent one-way End-floor portal in PR #4:
 - Preserve cross-dimension velocity and camera orientation.
 - At most 16 End-exit players may have a small server-side landing watcher.
   It expires after 1200 ticks or on landing, disconnect, or dimension change.
-- Players fall normally until within **48 blocks of a real heightmap surface**.
+- Players fall normally until within **48 blocks of a real collision
+  surface or water under their feet**, sampled with a bounded downward ray
+  every other tick. This detects cave floors and floating islands.
 - While descending in that area, refresh a short invisible vanilla
   `SLOW_FALLING` effect. No on-screen potion icon, particles or dramatic
   camera changes. The client receives normal effect and physics updates.
 - The protector does not place water or platforms, does not teleport players
   near the ground, and does not keep distant dimension chunks resident.
-  It checks only the player's current loaded chunk heightmap.
+  It samples the player's nearby column with a short ray, without adding
+  new remote portal chunk tickets.
 
-**Important:** `MOTION_BLOCKING_NO_LEAVES` is a rough surface estimate,
-not a collision prediction. Caves, overhangs, water/lava, unloaded terrain
-and Skyland void columns can invalidate it. Falling into Skyland void may
+**Important:** short-range collision and water raycasts are still only an
+approximation. Edges, moving platforms, lava, unloaded terrain and
+Skyland void columns can invalidate the landing. Falling into Skyland void may
 remain fatal. Do not deploy without real falling and safe-area testing.
 Permanent water/landing platforms must be deliberately built by the server
 admin rather than generated across arbitrary X/Z.
