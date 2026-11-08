@@ -47,6 +47,13 @@ public class DimStackManagement {
         }
         
         DimensionAPI.SERVER_DIMENSIONS_LOAD_EVENT.register(server -> {
+            // createLevels HEAD is the only DimLib direct-registration window.
+            // On a dedicated server the old preset was not read until the
+            // later setInitialSpawn hook, *after* this event had fired. That
+            // silently skipped Skyland creation and left the stack unapplied.
+            if (dimStackToApply == null && O_O.isDedicatedServer()) {
+                dimStackToApply = getDimStackPreset();
+            }
             if (dimStackToApply != null) {
                 DimensionStackAPI.DIMENSION_STACK_PRE_UPDATE_EVENT.invoker()
                     .run(server, dimStackToApply);
@@ -85,7 +92,16 @@ public class DimStackManagement {
         }
         
         if (dimStackToApply != null) {
-            dimStackToApply.apply(server);
+            // On existing worlds, global portals can already be restored
+            // from saved data. The eager createLevels-HEAD preset lookup
+            // must not recreate those portals after the worlds appear.
+            if (hasDimStackPortal(server)) {
+                LOGGER.info("Existing global dimension stack present; keeping persisted portals");
+                updateBedrockReplacementFromStorage(server);
+            }
+            else {
+                dimStackToApply.apply(server);
+            }
             dimStackToApply = null;
         }
         else {
