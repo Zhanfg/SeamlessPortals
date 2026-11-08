@@ -55,6 +55,10 @@ public class IPGlobal {
     // The client renderer is NOT moved to the server.
     public static int lowMemoryServerObservationRangeBlocks = 128;
     public static int lowMemoryServerSafeRangeBlocks = 24;
+    // Vertical dimension-stack seams are global portals spanning a world.
+    // Load only a small target area, but prepare ahead of a fast crossing.
+    public static int lowMemoryServerStackMaxPortalRadius = 2;
+    public static int lowMemoryServerStackSafeRangeBlocks = 32;
     public static int lowMemoryServerActiveViewsPerPlayer = 1;
     public static int lowMemoryServerChainLoaderBudget = 0;
     public static int lowMemoryServerStaleReleaseGenerations = 1;
