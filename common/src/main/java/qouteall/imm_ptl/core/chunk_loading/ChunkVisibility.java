@@ -10,6 +10,7 @@ import qouteall.imm_ptl.core.IPGlobal;
 import qouteall.imm_ptl.core.McHelper;
 import qouteall.imm_ptl.core.portal.Portal;
 import qouteall.imm_ptl.core.portal.global_portals.GlobalPortalStorage;
+import qouteall.imm_ptl.core.portal.global_portals.VerticalConnectingPortal;
 import qouteall.q_misc_util.my_util.LimitedLogger;
 
 import java.util.Comparator;
@@ -94,6 +95,19 @@ public class ChunkVisibility {
         return result;
     }
     
+    /** Motion toward the closest point of a portal surface, in blocks per tick.
+     * Velocity is read only from the authoritative server player entity. */
+    private static double velocityTowardPortal(ServerPlayer player, Portal portal, Vec3 eye) {
+        Vec3 toward = portal.getNearestPointInPortal(eye).subtract(eye);
+        double lengthSqr = toward.lengthSqr();
+        if (lengthSqr < 0.0001 || !Double.isFinite(lengthSqr)) {
+            return 0;
+        }
+        return Math.max(0, player.getDeltaMovement().dot(
+            toward.scale(1.0 / Math.sqrt(lengthSqr))
+        ));
+    }
+
     private static ChunkLoader getGeneralDirectPortalLoader(
         ServerPlayer player, Portal portal
     ) {
@@ -108,14 +122,20 @@ public class ChunkVisibility {
                 )
             );
             
-            // A global dimension-stack portal is still an authoritative
-            // destination load on the server. Bound it under memory pressure.
+            // A global portal still requests authoritative destination chunks.
+            // Vertical stack seams get a tighter cap than ordinary global
+            // portals when the 2 GiB profile is enabled.
             renderDistance = ServerPortalLoadBudget.capRadius(
                 renderDistance, Integer.MAX_VALUE,
                 IPGlobal.indirectLoadingRadiusCap * 2,
                 PerformanceLevel.getIndirectLoadingRadiusCap(ServerPerformanceMonitor.getLevel()) * 2,
                 1, IPGlobal.lowMemoryServerMode, IPGlobal.lowMemoryServerMaxPortalRadius
             );
+            if (IPGlobal.lowMemoryServerMode && portal instanceof VerticalConnectingPortal) {
+                renderDistance = DimensionStackLoadPolicy.stackRadiusLimit(
+                    renderDistance, IPGlobal.lowMemoryServerStackMaxPortalRadius
+                );
+            }
             return new ChunkLoader(
                 new DimensionalChunkPos(
                     portal.getDestDim(),
@@ -302,9 +322,17 @@ public class ChunkVisibility {
                     double lengthSqr = toPortal.lengthSqr();
                     double lookDot = lengthSqr < 0.0001
                         ? 1.0 : look.dot(toPortal.scale(1.0 / Math.sqrt(lengthSqr)));
+                    double distance = portal.getDistanceToNearestPointInPortal(eye);
+                    if (portal instanceof VerticalConnectingPortal) {
+                        return DimensionStackLoadPolicy.shouldPrepare(
+                            distance, portal.isInFrontOfPortal(eye), lookDot,
+                            observationRange,
+                            IPGlobal.lowMemoryServerStackSafeRangeBlocks,
+                            velocityTowardPortal(player, portal, eye)
+                        );
+                    }
                     return ServerPortalInterest.shouldLoad(
-                        portal.getDistanceToNearestPointInPortal(eye),
-                        portal.isInFrontOfPortal(eye),
+                        distance, portal.isInFrontOfPortal(eye),
                         lookDot, observationRange, IPGlobal.lowMemoryServerSafeRangeBlocks
                     );
                 })
@@ -313,10 +341,16 @@ public class ChunkVisibility {
                 ))
                 .toList();
 
-            long nearPortalCount = interested.stream().filter(
-                p -> p.getDistanceToNearestPointInPortal(eye)
-                    <= IPGlobal.lowMemoryServerSafeRangeBlocks
-            ).count();
+            long nearPortalCount = interested.stream().filter(p -> {
+                int safeRange = IPGlobal.lowMemoryServerSafeRangeBlocks;
+                if (p instanceof VerticalConnectingPortal) {
+                    safeRange = DimensionStackLoadPolicy.crossingSafetyRange(
+                        IPGlobal.lowMemoryServerStackSafeRangeBlocks,
+                        velocityTowardPortal(player, p, eye)
+                    );
+                }
+                return p.getDistanceToNearestPointInPortal(eye) <= safeRange;
+            }).count();
             int maxViews = ServerPortalInterest.effectiveViewLimit(
                 IPGlobal.lowMemoryServerActiveViewsPerPlayer,
                 (int) Math.min(nearPortalCount, Integer.MAX_VALUE)
