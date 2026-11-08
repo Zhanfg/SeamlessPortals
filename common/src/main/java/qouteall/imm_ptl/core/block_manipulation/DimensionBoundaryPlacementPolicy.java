@@ -40,6 +40,11 @@ public final class DimensionBoundaryPlacementPolicy {
         return NO_CELL;
     }
 
+    /** A click on the interior of the first legal cell, never out of height. */
+    public static double interiorHitY(int cellY, double contentDirectionY) {
+        return contentDirectionY > 0 ? cellY + 0.01 : cellY + 0.99;
+    }
+
     public static boolean isSourcePlaneAtBoundary(
         double sourcePlaneY, int sourceMinY, int sourceMaxY
     ) {
