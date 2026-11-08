@@ -21,9 +21,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        end_destination:
-          - minecraft:overworld
-          - immersive_portals:skyland
+        include:
+          - end_destination: minecraft:overworld
+            artifact_suffix: overworld
+          - end_destination: immersive_portals:skyland
+            artifact_suffix: skyland
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -146,7 +148,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fabric-26.3-end-exit-${{ matrix.end_destination }}-smoke-log
+          name: fabric-26.3-end-exit-${{ matrix.artifact_suffix }}-smoke-log
           path: server-smoke.log
           if-no-files-found: warn
           retention-days: 7
