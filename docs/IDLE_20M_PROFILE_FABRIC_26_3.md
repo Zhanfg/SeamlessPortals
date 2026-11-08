@@ -52,7 +52,9 @@ leaving RAM for the native JVM, OS and filesystem cache. Don't use
 2. Within 24 blocks, the bypass is always active, even when the player looks
    away. This protects collision/teleport preparation.
 3. Farther out, only front-facing and broadly observed portals stream
-   destination chunks; one portal view per player is the initial budget.
+   destination chunks; one portal view per player is the initial budget. When
+   two portals are both within the 24-block safety zone, up to two take
+   precedence over the ordinary view budget so nearby crossing stays usable.
 4. Recursive nested portal background preload defaults to off for this opt-in
    profile; direct portal crossing remains supported.
 5. Portal-fed chunk watcher records age out faster after becoming unobserved,
@@ -100,7 +102,16 @@ with the same environment, so two instances do not contaminate 2 GiB RAM.
 5. Run 100 repeated crossings before promoting to stable. Compare to PR #1
    and the unmodified 26.3 source.
 
-On Linux, the RSS reading for the Minecraft process is:
+An executable no-argument sampling helper is included at
+`tools/measure-portal-rss.sh`. On the VPS, run it once with
+`SAMPLE_LABEL=baseline sh tools/measure-portal-rss.sh` and once with
+`SAMPLE_LABEL=candidate sh tools/measure-portal-rss.sh`, with only
+one Minecraft server process running at a time. Each 60-sample series
+uses 5-second spacing by default and prints the median/P95 and delta.
+The script saves simple `benchmarks/rss_*.csv` results. If the auto-detected
+Java PID is ambiguous, set `JAVA_PID` explicitly.
+
+On Linux, the underlying RSS reading for the Minecraft process is:
 
 ```sh
 grep '^VmRSS:' /proc/PROCESS_PID/status
