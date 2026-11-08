@@ -5,10 +5,12 @@ on:
     branches:
       - optimize/fabric-26.3-client-server-split
       - optimize/fabric-26.3-idle-20m-v1
+      - optimize/fabric-26.3-stack-lowmem-v1
   pull_request:
     branches:
       - mc-26.3-main
       - optimize/fabric-26.3-client-server-split
+      - optimize/fabric-26.3-idle-20m-v1
   workflow_dispatch:
 
 concurrency:
