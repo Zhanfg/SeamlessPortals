@@ -29,5 +29,9 @@ class ServerPortalInterestTest {
         assertEquals(1, ServerPortalInterest.activeViewLimit(0));
         assertEquals(2, ServerPortalInterest.activeViewLimit(2));
         assertEquals(8, ServerPortalInterest.activeViewLimit(200));
+        assertEquals(1, ServerPortalInterest.effectiveViewLimit(1, 0));
+        assertEquals(2, ServerPortalInterest.effectiveViewLimit(1, 2));
+        assertEquals(2, ServerPortalInterest.effectiveViewLimit(1, 20));
+        assertEquals(3, ServerPortalInterest.effectiveViewLimit(3, 1));
     }
 }
