@@ -1,0 +1,63 @@
+name: Fabric 26.3 dedicated-server smoke
+
+on:
+  push:
+    branches:
+      - optimize/fabric-26.3-idle-20m-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  headless-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '25'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Prepare two plausible Loom run directories
+        shell: bash
+        run: |
+          mkdir -p fabric/runs/server runs/server
+          for d in fabric/runs/server runs/server; do
+            printf 'eula=true\n' > "$d/eula.txt"
+            cat > "$d/server.properties" <<'PROPS'
+          online-mode=false
+          view-distance=5
+          simulation-distance=4
+          max-players=2
+          spawn-protection=0
+          PROPS
+          done
+      - name: Boot dedicated Fabric server and detect ready state
+        shell: bash
+        run: |
+          set -uo pipefail
+          chmod +x gradlew
+          timeout --signal=INT --kill-after=15s 180s \
+            ./gradlew :fabric:runServer --console=plain --no-daemon \
+            > server-smoke.log 2>&1
+          exit_code=$?
+          echo "Server runner exit code: $exit_code"
+          tail -n 150 server-smoke.log
+          if grep -Eq 'Done \([0-9.,]+s\)!|Done \([0-9.,]+s\)' server-smoke.log; then
+            echo "PASS: dedicated Fabric server reached ready state"
+            exit 0
+          fi
+          echo "FAIL: server never reached ready state"
+          exit 1
+      - name: Save server startup log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabric-26.3-dedicated-server-smoke-log
+          path: server-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
