@@ -2,26 +2,46 @@
 
 ## Recommended first topology
 
-Use **two vanilla dimensions only**:
+Use three connected worlds, top-to-bottom:
 
 ```
-Overworld
-  floor (minimum Y), bidirectional
-  ↕
-Nether
-  ceiling (maximum Y)
+Skyland (immersive_portals:skyland)
+   floor / minimum Y
+         ↕
+Overworld (minecraft:overworld)
+   ceiling / Y = 320 (highest buildable block Y = 319)
+         |
+   Overworld floor / Y = -64
+         ↕
+Nether (minecraft:the_nether)
+   ceiling / Y = 256
 
-The End: keep the ordinary End portal; do not put the End into this first stack.
+The End: keep the normal End portal and do not add it to the stack.
 ```
 
-The End's void and special return rules require extra collision/respawn testing.
-Do **not** enable `loop`: the goal is one controllable join rather than
-additional global seams. No alternate dimensions are enabled or created.
+The preset entry order is **top-to-bottom**:
+`[skyland, overworld, the_nether]`.
+With `flipped=false`, the code connects each entry's floor to the
+next entry's ceiling and builds the reverse portal as well.
+This gives an Overworld-ceiling ↔ Skyland-floor seam, plus the
+Overworld-floor ↔ Nether-ceiling seam. The actual generated Skyland
+terrain height depends on its generator, so verify that a traversable
+arrival zone exists; being above the Overworld does not guarantee a
+solid island immediately over the transition plane.
 
-**Back up the entire world** before turning on dimension stacking. The built-in
-preset persists global portals, replaces bedrock in generated areas with the
-chosen replacement block, and affects dimension boundaries. A config-only
-rollback may not restore already-generated terrain or saved portals.
+`immersive_portals:skyland` is the mod's built-in optional dimension,
+created on demand when the stack preset references it. This is
+**one extra dimension**, not vanilla-only. Each instantiated
+ServerLevel adds overhead even with zero nearby players; therefore the
+**20 MiB idle incremental RSS target is not guaranteed** with Skyland
+enabled. It must be benchmarked on the actual 2 GiB VPS.
+
+Do **not** enable `loop`; the End stays separate, and avoid
+`bright_skyland` until the first topology works.
+
+**Back up the entire world** before enabling the stack. A saved stack
+can persist global portals and replace bedrock generation, so removing
+the config is not a reliable undo. Use a fresh test world first.
 
 ### Example config (merge into the EXISTING server JSON)
 
@@ -44,6 +64,12 @@ rollback may not restore already-generated terrain or saved portals.
     "gravityTransform": false,
     "entries": [
       {
+        "dimensionIdStr": "immersive_portals:skyland",
+        "scale": 1.0,
+        "flipped": false,
+        "bedrockReplacementStr": "minecraft:obsidian"
+      },
+      {
         "dimensionIdStr": "minecraft:overworld",
         "scale": 1.0,
         "flipped": false,
@@ -60,11 +86,14 @@ rollback may not restore already-generated terrain or saved portals.
 }
 ```
 
-The entry order matters. `[overworld, the_nether]` joins the
-Overworld **floor** to the Nether **ceiling**, with a reverse portal.
-Both entries retain `connectsNext=true` / `connectsPrevious=true`
-defaults. The replacement block stays physically solid until it is
-excavated; this is not an invitation to jump into uncleared terrain.
+The entry order matters. `[skyland, overworld, the_nether]` joins
+the Skyland **floor** with the Overworld **ceiling**, and joins the
+Overworld **floor** with the Nether **ceiling**. Reverse portals are
+created for both seams. The entries retain
+`connectsNext=true` / `connectsPrevious=true` defaults.
+The replacement block can be physically solid, and Skyland can have
+a void beneath islands: prepare protected landing platforms on **both**
+sides before crossing. Never test a first crossing with valuable gear.
 
 `scale=1.0` keeps the global seam at 1:1 horizontal coordinates. Standard
 Nether portals may use different horizontal-coordinate scaling, so treat
@@ -84,7 +113,8 @@ stack boundaries separately from ordinary Nether portal routing.
 - The ordinary observation gate still suppresses remote destination loading
   when a player is far away and not looking at the seam.
 - Existing two-close-portal safety allowance and global nested-loader budget
-  remain in force. Extra dimensions are not activated by this patch.
+  remain in force. The optimization does not itself create dimensions.
+  The explicit stack **does** enable the optional Skyland dimension.
 - Global seam portals keep using vanilla-authoritative world state, entity
   ownership, collision and teleportation. The client only renders supplied
   chunk state.
@@ -96,14 +126,16 @@ entrypoint/mixin packaging audit.
 ## Testing and release gates
 
 1. Java 25 `./gradlew :common:test :fabric:build`.
-2. Dedicated-server smoke with the two-vanilla-dimension JSON preset.
-   Check both that the server reports ready and that
-   `Applying dimension stack preset in dedicated server` was logged.
-3. Real world: dig/open a **safe landing area** at both faces; walk/fall
-   through Overworld ↔ Nether with normal movement and fast descent.
-4. Test both sides of the seam at large X/Z, two players, overlapping
-   normal portals, disconnect/reconnect while near the seam, and reverse
-   travel after reload.
+2. Dedicated-server smoke with the three-dimension JSON preset,
+   including `immersive_portals:skyland`. Verify readiness and the
+   `Applying dimension stack preset in dedicated server` log line,
+   then inspect actual world creation and dimension registration.
+3. Create **safe landing areas** at both faces of both seams;
+   verify Skyland ↔ Overworld and Overworld ↔ Nether on foot, with
+   slow and fast approaches. In particular, account for Skyland void.
+4. Test both sides of both seams at large X/Z, two players,
+   overlapping ordinary Nether portals, disconnect/reconnect
+   near the seam, and reverse travel after restart.
 5. Verify no prolonged chunk thrash or temporary void/collision gaps;
    validate that the End remains accessible through its original portal.
 6. A/B memory: compare with the same Fabric server *without the mod*,
