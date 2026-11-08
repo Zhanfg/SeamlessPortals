@@ -53,16 +53,14 @@ public class ChunkVisibility {
         int cap2 = IPGlobal.indirectLoadingRadiusCap;
         int cap3 = PerformanceLevel.getIndirectLoadingRadiusCap(ServerPerformanceMonitor.getLevel());
         
-        int cap = Math.min(cap1, cap2);
-        
-        // load more for scaling portal
-        if (portal.getScale() > 2) {
-            cap *= 2;
-        }
-        
-        int cappedLoadingDistance = Math.min(targetLoadingDistance, cap);
-        
-        return cappedLoadingDistance;
+        // The original code computed cap3 but never used it. Respect the server's
+        // own MSPT pressure tier in addition to the client and configured caps.
+        // The opt-in low-memory hard limit is applied AFTER portal scaling.
+        return ServerPortalLoadBudget.capRadius(
+            targetLoadingDistance, cap1, cap2, cap3,
+            portal.getScale() > 2 ? 2 : 1,
+            IPGlobal.lowMemoryServerMode, IPGlobal.lowMemoryServerMaxPortalRadius
+        );
     }
     
     public static List<Portal> getNearbyPortals(
@@ -110,6 +108,14 @@ public class ChunkVisibility {
                 )
             );
             
+            // A global dimension-stack portal is still an authoritative
+            // destination load on the server. Bound it under memory pressure.
+            renderDistance = ServerPortalLoadBudget.capRadius(
+                renderDistance, Integer.MAX_VALUE,
+                IPGlobal.indirectLoadingRadiusCap * 2,
+                PerformanceLevel.getIndirectLoadingRadiusCap(ServerPerformanceMonitor.getLevel()) * 2,
+                1, IPGlobal.lowMemoryServerMode, IPGlobal.lowMemoryServerMaxPortalRadius
+            );
             return new ChunkLoader(
                 new DimensionalChunkPos(
                     portal.getDestDim(),
@@ -139,8 +145,11 @@ public class ChunkVisibility {
             // than having its protection overridden upward.
             if (IPGlobal.portalChunkRetentionMode
                 == IPGlobal.PortalChunkRetentionMode.clientAndServer
-                && ImmPtlChunkTracking.getPlayerInfo(player).performanceLevel
-                == PerformanceLevel.good
+                && ServerPortalLoadBudget.allowPersistentServerRetention(
+                    ImmPtlChunkTracking.getPlayerInfo(player).performanceLevel == PerformanceLevel.good,
+                    ServerPerformanceMonitor.getLevel() == PerformanceLevel.good,
+                    IPGlobal.lowMemoryServerMode
+                )
             ) {
                 int configuredRadius = IPGlobal.portalChunkRetentionRadiusChunks;
                 int retentionRadius = configuredRadius <= 0
@@ -176,9 +185,11 @@ public class ChunkVisibility {
         int loadDistance = McHelper.getPlayerLoadDistance(player);
         
         if (portal.getIsGlobal()) {
-            int renderDistance = Math.min(
-                IPGlobal.indirectLoadingRadiusCap,
-                loadDistance / 3
+            int renderDistance = ServerPortalLoadBudget.capRadius(
+                Math.min(IPGlobal.indirectLoadingRadiusCap, loadDistance / 3),
+                Integer.MAX_VALUE, IPGlobal.indirectLoadingRadiusCap,
+                PerformanceLevel.getIndirectLoadingRadiusCap(ServerPerformanceMonitor.getLevel()),
+                1, IPGlobal.lowMemoryServerMode, IPGlobal.lowMemoryServerMaxPortalRadius
             );
             return new ChunkLoader(
                 new DimensionalChunkPos(

@@ -1,0 +1,40 @@
+name: Fabric 26.3 low-memory validation
+
+on:
+  push:
+    branches:
+      - optimize/fabric-26.3-client-server-split
+  pull_request:
+    branches:
+      - mc-26.3-main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Java 25 (Azul Zulu, matching the upstream toolchain pin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '25'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests and Fabric production compilation
+        run: |
+          chmod +x gradlew
+          ./gradlew :common:test :fabric:build --no-daemon --stacktrace
+      - name: Publish Fabric build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seamlessportals-fabric-26.3-lowmem-candidate
+          path: fabric/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
