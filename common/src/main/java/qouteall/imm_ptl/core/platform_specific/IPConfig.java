@@ -265,6 +265,16 @@ public class IPConfig implements ConfigData {
     @ConfigEntry.BoundedDiscrete(min = 1, max = 32)
     @ConfigEntry.Gui.Tooltip
     public int indirectLoadingRadiusCap = 8;
+    /**
+     * Dedicated-server resource profile. Optional: limits authoritative
+     * destination chunk residency, not client-side portal rendering.
+     * Particularly useful on hosts with 2 GB RAM and 2 vCPUs.
+     */
+    @ConfigEntry.Gui.Tooltip
+    public boolean lowMemoryServerMode = false;
+    @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
+    @ConfigEntry.Gui.Tooltip
+    public int lowMemoryServerMaxPortalRadius = 3;
     @ConfigEntry.BoundedDiscrete(min = 3, max = 64)
     public int regularPortalLengthLimit = 64;
     @ConfigEntry.BoundedDiscrete(min = 4, max = 128)
@@ -396,6 +406,9 @@ public class IPConfig implements ConfigData {
         IPGlobal.looseMovementCheck = looseMovementCheck;
         IPGlobal.pureMirror = pureMirror;
         IPGlobal.indirectLoadingRadiusCap = indirectLoadingRadiusCap;
+        IPGlobal.lowMemoryServerMode = lowMemoryServerMode;
+        IPGlobal.lowMemoryServerMaxPortalRadius =
+            Mth.clamp(lowMemoryServerMaxPortalRadius, 1, 8);
         IPGlobal.netherPortalMode = netherPortalMode;
         IPGlobal.endPortalMode = endPortalMode;
         IPGlobal.reducedPortalRendering = reducedPortalRendering;
