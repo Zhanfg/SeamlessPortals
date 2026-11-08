@@ -42,4 +42,12 @@ public final class ServerPortalInterest {
     public static int activeViewLimit(int configuredLimit) {
         return Math.max(1, Math.min(configuredLimit, 8));
     }
+
+    /** Give at most two near-crossing portals priority over the normal
+     * one-view default. Densely stacked portals still require a runtime
+     * crossing test and cannot bypass the whole server's memory budget. */
+    public static int effectiveViewLimit(int configuredLimit, int nearPortalCount) {
+        return Math.max(activeViewLimit(configuredLimit),
+            Math.min(2, Math.max(0, nearPortalCount)));
+    }
 }
