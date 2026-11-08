@@ -22,6 +22,13 @@ class DimensionBoundaryPlacementPolicyTest {
         assertEquals(-64, DimensionBoundaryPlacementPolicy.firstCell(-64, 1, -64, 319, 1));
     }
 
+    @Test void hitLocationsAreInsideTheRealDestinationCell() {
+        assertEquals(-63.99,
+            DimensionBoundaryPlacementPolicy.interiorHitY(-64, 1), 0.000001);
+        assertEquals(319.99,
+            DimensionBoundaryPlacementPolicy.interiorHitY(319, -1), 0.000001);
+    }
+
     @Test void rejectsInteriorEndExitAndUnsafeTransforms() {
         assertEquals(DimensionBoundaryPlacementPolicy.NO_CELL,
             DimensionBoundaryPlacementPolicy.firstCell(288, -1, -64, 319, 1));
