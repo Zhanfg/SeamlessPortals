@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - optimize/fabric-26.3-client-server-split
+      - optimize/fabric-26.3-idle-20m-v1
   pull_request:
     branches:
       - mc-26.3-main
+      - optimize/fabric-26.3-client-server-split
   workflow_dispatch:
 
 permissions:
@@ -34,7 +36,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: seamlessportals-fabric-26.3-lowmem-candidate
+          name: seamlessportals-fabric-26.3-lowmem-${{ github.sha }}
           path: fabric/build/libs/*.jar
           if-no-files-found: error
           retention-days: 7
