@@ -295,7 +295,7 @@ public class ChunkVisibility {
                 IPGlobal.lowMemoryServerObservationRangeBlocks,
                 Math.max(96, IPGlobal.portalWindowRenderDistance * 16)
             );
-            nearbyPortals = nearbyPortals.stream()
+            List<Portal> interested = nearbyPortals.stream()
                 .filter(portal -> {
                     Vec3 nearest = portal.getNearestPointInPortal(eye);
                     Vec3 toPortal = nearest.subtract(eye);
@@ -311,10 +311,19 @@ public class ChunkVisibility {
                 .sorted(Comparator.comparingDouble(
                     portal -> portal.getDistanceToNearestPointInPortal(eye)
                 ))
-                .limit(ServerPortalInterest.activeViewLimit(
-                    IPGlobal.lowMemoryServerActiveViewsPerPlayer
-                ))
                 .toList();
+
+            long nearPortalCount = interested.stream().filter(
+                p -> p.getDistanceToNearestPointInPortal(eye)
+                    <= IPGlobal.lowMemoryServerSafeRangeBlocks
+            ).count();
+            int maxViews = ServerPortalInterest.effectiveViewLimit(
+                IPGlobal.lowMemoryServerActiveViewsPerPlayer,
+                (int) Math.min(nearPortalCount, Integer.MAX_VALUE)
+            );
+            nearbyPortals = interested.size() > maxViews
+                ? interested.subList(0, maxViews)
+                : interested;
         }
 
         // IS5-RLOAD: ONE budget for the whole player tick, shared across every direct portal's
