@@ -42,8 +42,10 @@ stack seam:
    `MixinMultiPlayerGameMode` and `BlockManipulationServer` RPC routing.
 5. Vanilla's destination-side `BlockItem.place`, item consumption, protected
    area checks, shape/orientation and block update packets remain the
-   authoritative operations. The client makes no direct server-side world
-   writes.
+   authoritative operations. For vertical global seams, preserve the
+   **transformed actual click location** rather than the old `Vec3.ZERO`
+   placeholder; this is important for stairs, slabs and face-mounted items.
+   The client makes no direct server-side world writes.
 
 The hit is synthesized only for the EMPTY target, not after hitting a real
 block, entity or water. Existing normal cross-portal block interaction and
