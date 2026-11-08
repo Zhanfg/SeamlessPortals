@@ -107,7 +107,17 @@ jobs:
                 tail -n 110 server-smoke.log
                 exit 1
               fi
-              echo "PASS: dedicated Fabric server booted and three-dimension Skyland stack preset was read"
+              if grep -Fq 'Failed to apply dimension stack' server-smoke.log; then
+                echo "FAIL: dimensions preset was read but its global portals were NOT installed"
+                tail -n 110 server-smoke.log
+                exit 1
+              fi
+              if ! grep -Fq 'Global portal storage initialized immersive_portals:skyland' server-smoke.log; then
+                echo "FAIL: Skyland world was not actually registered"
+                tail -n 110 server-smoke.log
+                exit 1
+              fi
+              echo "PASS: three-dimension Skyland stack actually initialized in dedicated server"
               tail -n 50 server-smoke.log
               exit 0
             fi
