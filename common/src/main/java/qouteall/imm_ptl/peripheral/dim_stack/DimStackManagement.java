@@ -45,6 +45,7 @@ public class DimStackManagement {
         if (!isDimStackEnabled()) {
             return;
         }
+        EndExitLandingAssist.init();
         
         DimensionAPI.SERVER_DIMENSIONS_LOAD_EVENT.register(server -> {
             // createLevels HEAD is the only DimLib direct-registration window.
