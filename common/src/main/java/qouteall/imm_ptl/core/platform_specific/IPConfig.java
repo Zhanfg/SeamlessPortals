@@ -275,6 +275,20 @@ public class IPConfig implements ConfigData {
     @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
     @ConfigEntry.Gui.Tooltip
     public int lowMemoryServerMaxPortalRadius = 3;
+
+    // Low-memory observation policy; server validates interest against
+    // player orientation and portal geometry (never trusts a client chunk list).
+    @ConfigEntry.BoundedDiscrete(min = 16, max = 512)
+    public int lowMemoryServerObservationRangeBlocks = 128;
+    @ConfigEntry.BoundedDiscrete(min = 8, max = 48)
+    public int lowMemoryServerSafeRangeBlocks = 24;
+    @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
+    public int lowMemoryServerActiveViewsPerPlayer = 1;
+    @ConfigEntry.BoundedDiscrete(min = 0, max = 16)
+    public int lowMemoryServerChainLoaderBudget = 0;
+    @ConfigEntry.BoundedDiscrete(min = 0, max = 4)
+    public int lowMemoryServerStaleReleaseGenerations = 1;
+    public boolean lowMemoryServerDiagnostics = false;
     @ConfigEntry.BoundedDiscrete(min = 3, max = 64)
     public int regularPortalLengthLimit = 64;
     @ConfigEntry.BoundedDiscrete(min = 4, max = 128)
@@ -409,6 +423,17 @@ public class IPConfig implements ConfigData {
         IPGlobal.lowMemoryServerMode = lowMemoryServerMode;
         IPGlobal.lowMemoryServerMaxPortalRadius =
             Mth.clamp(lowMemoryServerMaxPortalRadius, 1, 8);
+        IPGlobal.lowMemoryServerObservationRangeBlocks =
+            Mth.clamp(lowMemoryServerObservationRangeBlocks, 16, 512);
+        IPGlobal.lowMemoryServerSafeRangeBlocks =
+            Mth.clamp(lowMemoryServerSafeRangeBlocks, 8, 48);
+        IPGlobal.lowMemoryServerActiveViewsPerPlayer =
+            Mth.clamp(lowMemoryServerActiveViewsPerPlayer, 1, 8);
+        IPGlobal.lowMemoryServerChainLoaderBudget =
+            Mth.clamp(lowMemoryServerChainLoaderBudget, 0, 16);
+        IPGlobal.lowMemoryServerStaleReleaseGenerations =
+            Mth.clamp(lowMemoryServerStaleReleaseGenerations, 0, 4);
+        IPGlobal.lowMemoryServerDiagnostics = lowMemoryServerDiagnostics;
         IPGlobal.netherPortalMode = netherPortalMode;
         IPGlobal.endPortalMode = endPortalMode;
         IPGlobal.reducedPortalRendering = reducedPortalRendering;
