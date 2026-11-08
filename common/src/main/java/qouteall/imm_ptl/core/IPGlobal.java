@@ -41,6 +41,14 @@ public class IPGlobal {
     public static int maxPortalLayer = 5;
     
     public static int indirectLoadingRadiusCap = 8;
+
+    /**
+     * Server-only residency policy. Clients keep the existing portal renderer.
+     * Enabling this opt-in mode caps remote chunk loaders but never limits the
+     * player's own vanilla view-distance loader.
+     */
+    public static boolean lowMemoryServerMode = false;
+    public static int lowMemoryServerMaxPortalRadius = 3;
     
     /** DEFAULT FALSE since 2026-08-02 (user decision) — see IPConfig.lagAttackProof for the reasoning
      *  and for what protection is given up. Kept in step with that field's default deliberately: if
