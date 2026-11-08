@@ -305,6 +305,16 @@ public class ImmPtlChunkTickets {
         return chunkPosToTicketInfo.size();
     }
 
+    /** Candidate positions driven by portal residency, not exact physical chunks
+     * or byte size. Called only by the low-frequency diagnostics logger. */
+    public int getPortalFedEntryCount() {
+        int result = 0;
+        for (ChunkTicketInfo info : chunkPosToTicketInfo.values()) {
+            if (info.portalFed) result++;
+        }
+        return result;
+    }
+
     // §2g once-only latch for the invalid-query silent-skip WARN (belt-and-braces:
     // onDimensionRemove removes the BY_DIMENSION entry BEFORE invalidating, so a query
     // should never see isValid=false).

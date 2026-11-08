@@ -85,6 +85,9 @@ public class ImmPtlChunkTracking {
         public boolean isLoadedToPlayer;
         public boolean isValid = true;
         public boolean isBoundary = false;
+        // Records whose last update was driven by remote portal residency can
+        // expire earlier than the player's own directly watched chunks.
+        public boolean isPortalFed = false;
         // the light data is only sent on visibility boundary
         // as the client can calculate light from block data
         
@@ -214,6 +217,7 @@ public class ImmPtlChunkTracking {
                             player, dimension, chunkPos, generationCounter, distanceToSource,
                             false, isBoundary
                         );
+                        newRecord.isPortalFed = portalFed;
                         playerInfo.markPendingLoading(newRecord);
                         playerInfo.loadedChunks++;
                         return newRecord;
@@ -221,6 +225,7 @@ public class ImmPtlChunkTracking {
                     else {
                         int oldDistance = record.distanceToSource;
                         if (record.lastWatchGeneration == generationCounter) {
+                            record.isPortalFed |= portalFed;
                             // being updated again in the same turn
                             if (distanceToSource < oldDistance) {
                                 record.distanceToSource = distanceToSource;
@@ -230,6 +235,9 @@ public class ImmPtlChunkTracking {
                             record.isBoundary = (record.isBoundary && isBoundary);
                         }
                         else {
+                            // First touch of this generation resets the source bit;
+                            // overlapping portal loaders will OR it back in.
+                            record.isPortalFed = portalFed;
                             // being updated at the first time in this turn
                             playerInfo.loadedChunks++;
                             if (distanceToSource < oldDistance) {
@@ -268,6 +276,14 @@ public class ImmPtlChunkTracking {
                     
                     PlayerWatchRecord record = e.getValue();
                     int delayUnloadGenerations = getDelayUnloadGenerationForPlayer(player);
+                    if (IPGlobal.lowMemoryServerMode && record.isPortalFed) {
+                        // Release unused remote views promptly, but do not
+                        // shorten the normal player's direct-view retention.
+                        delayUnloadGenerations = Math.min(
+                            delayUnloadGenerations,
+                            IPGlobal.lowMemoryServerStaleReleaseGenerations
+                        );
+                    }
                     boolean shouldRemove = generationCounter - record.lastWatchGeneration > delayUnloadGenerations;
                     
                     if (shouldRemove) {
@@ -445,6 +461,7 @@ public class ImmPtlChunkTracking {
         }
         
         EntitySync.tick(server);
+        ServerPortalTelemetry.tick(server);
     }
     
     public static boolean isPlayerWatchingChunk(

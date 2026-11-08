@@ -1,0 +1,79 @@
+name: Fabric 26.3 dedicated-server smoke
+
+on:
+  push:
+    branches:
+      - optimize/fabric-26.3-idle-20m-v1
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  headless-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '25'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Prepare two plausible Loom run directories
+        shell: bash
+        run: |
+          mkdir -p fabric/runs/server runs/server
+          for d in fabric/runs/server runs/server; do
+            printf 'eula=true\n' > "$d/eula.txt"
+            cat > "$d/server.properties" <<'PROPS'
+          online-mode=false
+          view-distance=5
+          simulation-distance=4
+          max-players=2
+          spawn-protection=0
+          PROPS
+          done
+      - name: Boot dedicated Fabric server and detect ready state
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          setsid ./gradlew :fabric:runServer --console=plain --no-daemon \
+            > server-smoke.log 2>&1 &
+          runner_pid=$!
+          trap 'kill -TERM -- -"$runner_pid" 2>/dev/null || true' EXIT
+          for ((i=1; i<=175; i++)); do
+            if grep -Eq 'Done \([0-9.,]+s\)!|Done \([0-9.,]+s\)' server-smoke.log; then
+              echo "PASS: dedicated Fabric server reached ready state"
+              tail -n 40 server-smoke.log
+              exit 0
+            fi
+            if ! kill -0 "$runner_pid" 2>/dev/null; then
+              echo "FAIL: Gradle server process exited before ready"
+              tail -n 150 server-smoke.log
+              exit 1
+            fi
+            if (( i % 20 == 0 )); then
+              echo "Server startup probe at check $i"
+              tail -n 10 server-smoke.log || true
+            fi
+            sleep 1
+          done
+          echo "FAIL: dedicated Fabric server not ready within validation window"
+          tail -n 150 server-smoke.log
+          exit 1
+      - name: Save server startup log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabric-26.3-dedicated-server-smoke-log
+          path: server-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
